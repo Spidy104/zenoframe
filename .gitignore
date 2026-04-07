@@ -1,0 +1,42 @@
+# Build outputs
+build/
+build-release/
+Testing/
+CMakeFiles/
+CMakeCache.txt
+CTestTestfile.cmake
+cmake_install.cmake
+compile_commands.json
+Makefile
+build.ninja
+*.ninja
+*.a
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.exe
+
+# CTest/CMake temporary data
+Testing/
+CTestCostData.txt
+LastTest.log
+LastTestsFailed.log
+
+# Local/editor state
+.cache/
+.codex
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Runtime logs and generated reports
+*.log
+*.csv
+*.jsonl
+perf.data
+perf.data.old
+
