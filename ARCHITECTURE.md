@@ -73,7 +73,7 @@ Release builds are the benchmark source of truth. Debug builds are still optimiz
 | `include/SenderEngine.hpp` | Packetization for full, temporal, DIR, and CS frames. |
 | `include/ReceiverEngine.hpp` | Fragment assembly for full/DIR frames plus temporal reconstruction and concealment. |
 | `include/PhaseConcealment.hpp` | Phase 2 public concealment data structures and API. |
-| `src/PhaseConcealment.cpp` | Phase 2 Hilbert-style analytic continuation implementation. |
+| `src/PhaseConcealment.cpp` | Phase 2 short Hilbert FIR approximation and analytic-domain continuation implementation. |
 | `include/CompressiveSampling.hpp` | Phase 3 payload structs and encode/decode API. |
 | `src/CompressiveSampling.cpp` | Phase 3 sampling, payload writing, affine reconstruction, and OMP fallback. |
 | `include/CompressiveReceiverEngine.hpp` | Receiver for complete or fragmented Phase 3 compressed payloads. |

@@ -9,7 +9,7 @@ The idea started with a simple question: if we are moving 1080p frames at 144 Hz
 ZenoFrame explores that with three pieces working together:
 
 1. Distributed intra-refresh, so frames can be refreshed in small rolling row windows instead of full-frame spikes.
-2. Analytic concealment using a short 1D Hilbert FIR approximation, so missing temporal rows can be healed instead of simply freezing stale data.
+2. Analytic concealment using a short 1D Hilbert FIR approximation plus analytic-domain interpolation, so missing temporal rows can be healed instead of simply freezing stale data.
 3. Compressive sampling, so the sender can transmit a compact sampled payload and reconstruct the frame on the receiver side.
 
 It has a real sender/receiver path, tests, benchmark docs, and enough caveats in the right places so the numbers do not pretend to be more than they are.
@@ -144,7 +144,7 @@ Use the paced section for normal frame-budget discussion. Use the burst stress s
 | --- | --- |
 | `src/udp_demo.cpp` | End-to-end full/DIR/CS demo flow. |
 | `src/CompressiveSampling.cpp` | Phase 3 sampling and reconstruction. |
-| `src/PhaseConcealment.cpp` | Phase 2 analytic row healing. |
+| `src/PhaseConcealment.cpp` | Phase 2 short Hilbert FIR and analytic-domain row healing. |
 | `src/ImageEngine.cpp` | AVX2/OpenMP image kernels. |
 | `include/SenderEngine.hpp` | Sender-side packetization. |
 | `include/ReceiverEngine.hpp` | Main full/DIR receiver path. |
