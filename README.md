@@ -7,7 +7,7 @@ The idea started with a simple question: if we are moving 1080p frames at 144 Hz
 This repo explores that question with three pieces working together:
 
 1. Distributed intra-refresh, so frames can be refreshed in small rolling row windows instead of full-frame spikes.
-2. Analytic/Hilbert-style concealment, so missing temporal rows can be healed instead of simply freezing stale data.
+2. Analytic concealment using a short 1D Hilbert FIR approximation, so missing temporal rows can be healed instead of simply freezing stale data.
 3. Compressive sampling, so the sender can transmit a compact sampled payload and reconstruct the frame on the receiver side.
 
 It is not trying to be a production video codec yet. It is a CPU-side research prototype with a real sender/receiver path, tests, and benchmark numbers that are documented as honestly as possible.
@@ -172,4 +172,3 @@ This part matters. ZenoFrame is promising, but it is not magic:
 ## License
 
 ZenoFrame is MIT licensed. See `LICENSE`.
-

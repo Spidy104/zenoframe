@@ -21,7 +21,7 @@ The research story is split into three phases:
 | Phase | Goal | Current Status |
 | --- | --- | --- |
 | Phase 1 | Avoid full-frame I-frame bandwidth spikes with distributed intra-refresh. | Implemented in the main sender/receiver path. |
-| Phase 2 | Use analytic/Hilbert phase information to conceal missing temporal rows. | Implemented and integrated into receiver partial-refresh handling. |
+| Phase 2 | Use a short 1D Hilbert FIR approximation plus analytic-domain interpolation to conceal missing temporal rows. | Implemented and integrated into receiver partial-refresh handling. |
 | Phase 3 | Send a compact sample payload instead of a raw full frame. | Implemented with tiled sampling and reconstruction. |
 
 The current system is a strong prototype. It is not yet a hard real-time product, a lossy-network protocol with FEC, or a dataset-backed video codec.
@@ -216,7 +216,7 @@ The algorithm:
 
 1. Identify missing row spans inside the temporal refresh window.
 2. Find valid boundary rows above and below the missing span.
-3. Compute a 1D Hilbert-style imaginary component for boundary rows.
+3. Compute a 1D Hilbert FIR approximation for boundary rows using odd taps at offsets `1`, `3`, and `5` with coefficients `2 / (pi * k)`.
 4. Treat each row as an analytic signal with real and imaginary components.
 5. Interpolate in the analytic/complex domain.
 6. Blend multiple neighboring rows to improve stability.
@@ -435,4 +435,3 @@ If you are new to the repo, read in this order:
 4. `ROADMAP.md` for the remaining work and non-goals.
 5. `src/udp_demo.cpp` if you want the end-to-end control flow.
 6. `src/CompressiveSampling.cpp` if you want the Phase 3 codec details.
-
