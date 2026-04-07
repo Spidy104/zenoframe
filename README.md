@@ -1,16 +1,18 @@
 # ZenoFrame
 
-ZenoFrame is a C++23 experiment in high-refresh image transport.
+ZenoFrame is a C++23 image transport prototype that processes 1080p frames in about `3.2 ms` on the paced 144 Hz DSP benchmark, with a P99 of `6.284 ms` against a `6.944 ms` frame budget.
+
+Under the hood it is a systems project as much as a DSP one: AVX2/FMA kernels, OpenMP tile/row parallelism, lock-free SPSC ready queues, reusable frame-buffer pools, and a UDP-style sender/receiver path for full frames, temporal refresh frames, and compressed sampled payloads.
 
 The idea started with a simple question: if we are moving 1080p frames at 144 Hz, can we avoid repeatedly blasting full frames over the wire and still keep the image useful when data goes missing?
 
-This repo explores that question with three pieces working together:
+ZenoFrame explores that with three pieces working together:
 
 1. Distributed intra-refresh, so frames can be refreshed in small rolling row windows instead of full-frame spikes.
 2. Analytic concealment using a short 1D Hilbert FIR approximation, so missing temporal rows can be healed instead of simply freezing stale data.
 3. Compressive sampling, so the sender can transmit a compact sampled payload and reconstruct the frame on the receiver side.
 
-It is not trying to be a production video codec yet. It is a CPU-side research prototype with a real sender/receiver path, tests, and benchmark numbers that are documented as honestly as possible.
+It has a real sender/receiver path, tests, benchmark docs, and enough caveats in the right places so the numbers do not pretend to be more than they are.
 
 ## What Works Today
 
@@ -21,6 +23,7 @@ The main pieces are implemented and wired into the demo path:
 | Phase 1 DIR | Implemented in the main sender/receiver path. |
 | Phase 2 concealment | Implemented in the receiver for incomplete temporal refreshes. |
 | Phase 3 compressive sampling | Implemented with tiled sampling and reconstruction. |
+| Systems path | Lock-free SPSC ready queues and reusable frame-buffer pools are used in the receiver path. |
 | Demos | `full`, `dir`, and `cs` modes run through `udp_demo`. |
 | Tests | CTest covers DSP, protocol, transport, temporal refresh, concealment, and compressive sampling. |
 
@@ -146,6 +149,8 @@ Use the paced section for normal frame-budget discussion. Use the burst stress s
 | `include/SenderEngine.hpp` | Sender-side packetization. |
 | `include/ReceiverEngine.hpp` | Main full/DIR receiver path. |
 | `include/CompressiveReceiverEngine.hpp` | Phase 3 compressed receiver path. |
+| `include/FrameBufferPool.hpp` | Reusable frame slots and ready-frame publication. |
+| `include/SPSCQueue.hpp` | Lock-free SPSC queue used for ready descriptors. |
 | `include/Protocol.hpp` | Packet header and flags. |
 | `tests/` | Regression, protocol, transport, temporal, Phase 2, and Phase 3 coverage. |
 
@@ -163,6 +168,7 @@ Use the paced section for normal frame-budget discussion. Use the burst stress s
 
 This part matters. ZenoFrame is promising, but it is not magic:
 
+- It is not trying to be a production video codec yet.
 - It does not guarantee hard real-time behavior under arbitrary OS load or thermal conditions.
 - It does not yet recover when only 10% of compressed UDP packets arrive.
 - It has not been validated across a broad natural-image/video dataset.
