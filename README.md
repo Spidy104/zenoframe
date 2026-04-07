@@ -1,131 +1,125 @@
 # ZenoFrame
 
-ZenoFrame is a C++23 research prototype for a 1080p, 144 Hz image/DSP transport pipeline. It combines an AVX2/OpenMP CPU DSP engine with a UDP-style frame transport and three experimental bandwidth/recovery phases.
+ZenoFrame is a C++23 experiment in high-refresh image transport.
 
-The project is trying to answer one practical question:
+The idea started with a simple question: if we are moving 1080p frames at 144 Hz, can we avoid repeatedly blasting full frames over the wire and still keep the image useful when data goes missing?
 
-Can a CPU-side transport pipeline keep useful 1080p frame continuity at high refresh rates while avoiding full-frame bandwidth spikes?
+This repo explores that question with three pieces working together:
 
-The current answer is:
+1. Distributed intra-refresh, so frames can be refreshed in small rolling row windows instead of full-frame spikes.
+2. Analytic/Hilbert-style concealment, so missing temporal rows can be healed instead of simply freezing stale data.
+3. Compressive sampling, so the sender can transmit a compact sampled payload and reconstruct the frame on the receiver side.
 
-- Yes for the DSP kernel under paced release benchmarking at P99.
-- Yes for Phase 1 distributed intra-refresh in no-loss 1000-frame runs.
-- Yes for Phase 2 temporal row concealment in the regression and continuity tests.
-- Yes for Phase 3 compact payload reconstruction over 1000 in-process frames.
-- Not yet for hard real-time Phase 3 end-to-end guarantees or 90% compressed-packet-loss recovery.
+It is not trying to be a production video codec yet. It is a CPU-side research prototype with a real sender/receiver path, tests, and benchmark numbers that are documented as honestly as possible.
 
-## Project Phases
+## What Works Today
 
-| Phase | Name | Goal | Status |
-| --- | --- | --- | --- |
-| Phase 1 | Distributed intra-refresh | Replace repeated full frames with rolling row-window refreshes. | Implemented in the main sender/receiver path. |
-| Phase 2 | Analytic concealment | Heal missing temporal refresh rows using Hilbert-style analytic continuation. | Implemented and integrated into receiver partial-refresh handling. |
-| Phase 3 | Compressive sampling | Send a compact sampled payload instead of the full raw frame. | Implemented with tiled sampling and reconstruction. |
+The main pieces are implemented and wired into the demo path:
 
-Important distinction: Phase 3 currently sends about 8-10% of the raw frame bytes. That does not mean the receiver can lose 90% of the transmitted compressed UDP packets. The current compressed payload is expected to arrive complete.
+| Area | Current state |
+| --- | --- |
+| Phase 1 DIR | Implemented in the main sender/receiver path. |
+| Phase 2 concealment | Implemented in the receiver for incomplete temporal refreshes. |
+| Phase 3 compressive sampling | Implemented with tiled sampling and reconstruction. |
+| Demos | `full`, `dir`, and `cs` modes run through `udp_demo`. |
+| Tests | CTest covers DSP, protocol, transport, temporal refresh, concealment, and compressive sampling. |
 
-## Current Release Snapshot
+The important caveat: Phase 3 sends about 8-10% of the raw frame bytes. That is data reduction. It does not mean the receiver can lose 90% of the compressed UDP packets and still reconstruct everything. Partial compressed-payload recovery is future work.
 
-These are the current local release-build numbers documented in `BENCHMARKS.md`:
+## Latest Snapshot
+
+These are local release-build numbers from the current benchmark report:
 
 | Area | Result |
 | --- | --- |
 | DSP paced 144 Hz run | Mean `3.185 ms`, P99 `6.284 ms`, target `6.944 ms`. |
-| Phase 1 DIR | `245,760` bytes per 32-row temporal frame, `2.96%` of raw full frame. |
-| Phase 2 concealment | Stale MAE `0.01185084`, concealed MAE `0.00031911`, avg `0.3148 ms`. |
+| Phase 1 DIR | `245,760` bytes per 32-row temporal frame, `2.96%` of a raw full frame. |
+| Phase 2 concealment | Stale MAE `0.01185084`, concealed MAE `0.00031911`, average `0.3148 ms`. |
 | Phase 3 controlled codec | `656,654` bytes, `7.92%` raw payload, MAE `0.000024`, max_abs `0.000301`. |
 | Phase 3 1000-frame main path | `1000 / 1000` frames validated, final input max_abs `0.000012338`. |
 
-See `BENCHMARKS.md` for the full interpretation, including the caveats around burst thermal stress and Phase 3 end-to-end timing.
+The benchmark story has nuance. The DSP kernel passes the 144 Hz budget at P99 in a paced release run, but the burst stress test still shows thermal and scheduling variance. Phase 3 is accurate over the 1000-frame in-process demo, but the full CS path is not yet a hard 144 Hz end-to-end guarantee.
 
-## Requirements
-
-The project is intentionally tuned to the build machine.
-
-| Requirement | Notes |
-| --- | --- |
-| CMake | 3.20 or newer. |
-| C++ compiler | C++23 support required. |
-| CPU features | AVX2 and FMA expected by the current build flags. |
-| Threading | OpenMP is required. |
-| OS/network | Linux/POSIX-style sockets are needed for UDP loopback mode. |
-
-The build uses `-march=native`, `-mtune=native`, `-mavx2`, `-mfma`, `-ffast-math`, OpenMP, and LTO. If you move the binary to a different CPU, rebuild it there.
+If you are evaluating the project, `BENCHMARKS.md` is the best place to start.
 
 ## Build
 
-Debug is not a pure `-O0` build. It uses `-O1 -g -fno-omit-frame-pointer` so profiling and iteration are still usable.
+The project is tuned for the build machine. It currently expects AVX2, FMA, OpenMP, and a C++23 compiler.
+
+Debug builds are kept profiling-friendly with `-O1 -g -fno-omit-frame-pointer`:
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
 ```
 
-Release is the source of truth for benchmark claims.
+Release builds are the ones to use for benchmark claims:
 
 ```bash
 cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release
 cmake --build build-release
 ```
 
-## Test
+The CMake configuration uses `-march=native`, so rebuild on the machine where you want to run the benchmarks.
 
-Run the full release suite:
+## Run Tests
+
+Run the full release test suite:
 
 ```bash
 ctest --test-dir build-release --output-on-failure
 ```
 
-If your environment blocks sockets, skip the UDP loopback test:
+If you are in a sandbox that blocks sockets, skip the UDP loopback test:
 
 ```bash
 ctest --test-dir build-release -E 'UDPLoopback' --output-on-failure
 ```
 
-Run the convenience target:
+There is also a convenience target:
 
 ```bash
 cmake --build build-release --target check
 ```
 
-See `TESTING.md` for the full validation guide and test map.
+For the test map and troubleshooting notes, see `TESTING.md`.
 
-## Run The Main Demo
+## Try The Demo
 
-`udp_demo` is the main end-to-end harness. It supports three modes:
+The main demo is `udp_demo`. It has three modes:
 
-| Mode | Meaning |
+| Mode | What it does |
 | --- | --- |
-| `--mode=full` | Full raw-frame transport baseline. |
-| `--mode=dir` | Phase 1 distributed intra-refresh. |
-| `--mode=cs` | Phase 3 compressive sampling. |
+| `--mode=full` | Sends full raw frames. Useful as the baseline. |
+| `--mode=dir` | Sends a full seed frame, then rolling row-window refreshes. |
+| `--mode=cs` | Sends the Phase 3 compressed sampled payload. |
 
-It also supports two transport backends:
+It also has two transport backends:
 
-| Backend | Meaning |
+| Backend | What it does |
 | --- | --- |
-| `--transport=inproc` | Fast benchmark path with in-process packet injection. |
-| `--transport=udp` | Real loopback UDP sockets. |
+| `--transport=inproc` | Injects packets/payloads in process. Best for measuring codec and receiver behavior. |
+| `--transport=udp` | Uses real loopback UDP sockets. Best for socket/packetization checks. |
 
-Full raw-frame smoke test:
+Full-frame smoke test:
 
 ```bash
 ./build-release/udp_demo --transport=inproc --mode=full --frames=3 --log-every=0
 ```
 
-Phase 1 DIR 1000-frame run:
+Phase 1 distributed intra-refresh:
 
 ```bash
 ./build-release/udp_demo --transport=inproc --mode=dir --frames=1000 --refresh-rows=32 --timeout-us=2000000 --benchmark-warmup=0 --benchmark-iterations=1 --benchmark-every=0 --progress-every=1000 --log-every=0
 ```
 
-Phase 3 CS 1000-frame run:
+Phase 3 compressive sampling:
 
 ```bash
 ./build-release/udp_demo --transport=inproc --mode=cs --frames=1000 --timeout-us=2000000 --benchmark-warmup=0 --benchmark-iterations=1 --benchmark-every=0 --progress-every=1000 --log-every=0
 ```
 
-The in-process transport is the preferred benchmark path. It still exercises the sender/receiver logic, but removes kernel socket overhead so codec and receiver costs are easier to see.
+`--transport=inproc` is the benchmark-friendly path. It still exercises the sender/receiver code, but it avoids kernel UDP overhead so the codec and receiver costs are easier to see.
 
 ## Run The DSP Benchmark
 
@@ -133,67 +127,49 @@ The in-process transport is the preferred benchmark path. It still exercises the
 ./build-release/dsp_benchmark
 ```
 
-The benchmark reports:
+This prints three views of the DSP path:
 
 - single-operation Gaussian and Sobel timings
 - a paced 144 Hz fused DSP run
 - a burst thermal stress run
 
-Use the paced 144 Hz section for normal frame-budget claims. Use the burst stress section as a thermal/variance warning.
+Use the paced section for normal frame-budget discussion. Use the burst stress section as a warning about thermal and scheduler behavior.
 
-## Documentation Map
+## Repo Guide
 
-| File | Purpose |
+| Path | What to look for |
 | --- | --- |
-| `README.md` | Project overview, build/run commands, and status. |
-| `ARCHITECTURE.md` | Detailed system architecture and data flow. |
-| `BENCHMARKS.md` | Current benchmark report and interpretation. |
-| `TESTING.md` | Validation commands, test map, and troubleshooting. |
-| `ROADMAP.md` | Remaining work and prioritized next steps. |
-| `results.md` | Compatibility pointer to the current benchmark report. |
-| `LICENSE` | MIT license for the project. |
+| `src/udp_demo.cpp` | End-to-end full/DIR/CS demo flow. |
+| `src/CompressiveSampling.cpp` | Phase 3 sampling and reconstruction. |
+| `src/PhaseConcealment.cpp` | Phase 2 analytic row healing. |
+| `src/ImageEngine.cpp` | AVX2/OpenMP image kernels. |
+| `include/SenderEngine.hpp` | Sender-side packetization. |
+| `include/ReceiverEngine.hpp` | Main full/DIR receiver path. |
+| `include/CompressiveReceiverEngine.hpp` | Phase 3 compressed receiver path. |
+| `include/Protocol.hpp` | Packet header and flags. |
+| `tests/` | Regression, protocol, transport, temporal, Phase 2, and Phase 3 coverage. |
 
-## Repository Map
+## Docs
 
-| Path | Purpose |
+| File | Why it exists |
 | --- | --- |
-| `include/ImageEngine.hpp`, `src/ImageEngine.cpp` | AVX2/OpenMP image operations and fused DSP kernels. |
-| `include/TemporalRefresh.hpp` | DIR refresh schedule and row-window metadata helpers. |
-| `include/SenderEngine.hpp` | Sender-side packetization for full, DIR, and CS frames. |
-| `include/ReceiverEngine.hpp` | Receiver-side assembly, temporal reconstruction, and Phase 2 concealment integration. |
-| `include/PhaseConcealment.hpp`, `src/PhaseConcealment.cpp` | Phase 2 analytic/Hilbert concealment module. |
-| `include/CompressiveSampling.hpp`, `src/CompressiveSampling.cpp` | Phase 3 sampling, encoding, and reconstruction. |
-| `include/CompressiveReceiverEngine.hpp` | Phase 3 compressed payload receiver. |
-| `include/Protocol.hpp` | Packet header and protocol contract. |
-| `src/udp_demo.cpp` | End-to-end demo and transport benchmark harness. |
-| `src/main.cpp` | DSP benchmark suite. |
-| `tests/` | Automated and benchmark-style tests. |
+| `ARCHITECTURE.md` | A deeper walkthrough of the data flow and phase design. |
+| `BENCHMARKS.md` | Current benchmark numbers and how to interpret them. |
+| `TESTING.md` | Test commands, test map, and troubleshooting notes. |
+| `ROADMAP.md` | What is done, what is next, and what should not be claimed yet. |
+| `results.md` | Compatibility pointer for older references to benchmark results. |
 
-## What Is Done
+## What I Would Not Claim Yet
 
-- Phase 1 DIR is implemented in the main path.
-- Phase 2 concealment is implemented in the main receiver.
-- Phase 3 compressed payload encode/decode is implemented in the sender/receiver/demo path.
-- The main demo supports full, DIR, and CS modes.
-- The benchmark suite reports paced and burst behavior separately.
-- The CTest suite covers the core DSP, protocol, transport, temporal, concealment, and CS paths.
+This part matters. ZenoFrame is promising, but it is not magic:
 
-## What Is Not Claimed Yet
-
-- Hard real-time guarantees under all OS scheduling and thermal conditions.
-- Recovery when only 10% of compressed UDP packets arrive.
-- Dataset-wide image/video quality validation on natural content.
-- Portable performance across CPUs without rebuilding.
-- A production network protocol with congestion control, retransmission, or forward-error correction.
+- It does not guarantee hard real-time behavior under arbitrary OS load or thermal conditions.
+- It does not yet recover when only 10% of compressed UDP packets arrive.
+- It has not been validated across a broad natural-image/video dataset.
+- It is not a portable binary distribution, because the build is intentionally native-tuned.
+- It is not a production network protocol with congestion control, retransmission, or FEC.
 
 ## License
 
-This project is licensed under the MIT License. See `LICENSE`.
+ZenoFrame is MIT licensed. See `LICENSE`.
 
-## Suggested Reading Order
-
-1. Read this README for the project shape.
-2. Read `BENCHMARKS.md` to understand the current numbers.
-3. Read `ARCHITECTURE.md` to understand how the code paths fit together.
-4. Read `TESTING.md` before changing behavior.
-5. Read `ROADMAP.md` before making claims about what is finished.
