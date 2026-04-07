@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(HighSpeedDSP VERSION 1.0 LANGUAGES CXX)
+project(ZenoFrame VERSION 1.0 LANGUAGES CXX)
 
 # ============================================================================
 # PHASE 1: THE TUNER - Aggressive Optimization Configuration
@@ -318,7 +318,7 @@ add_custom_target(check
 # ============================================================================
 
 message(STATUS "==========================================================")
-message(STATUS "High-Speed DSP Build Configuration")
+message(STATUS "ZenoFrame Build Configuration")
 message(STATUS "==========================================================")
 message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "C++ Standard: C++${CMAKE_CXX_STANDARD}")

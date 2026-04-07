@@ -300,7 +300,7 @@ void benchmark_single_ops(dsp::Image &img, int iterations) {
 
 int main() {
   std::println("╔═══════════════════════════════════════════════════════════╗");
-  std::println("║  High-Performance 2D DSP Engine Benchmark Suite          ║");
+  std::println("║  ZenoFrame DSP Benchmark Suite                           ║");
   std::println(
       "╚═══════════════════════════════════════════════════════════╝\n");
 

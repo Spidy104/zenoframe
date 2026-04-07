@@ -1,6 +1,6 @@
-# High-Speed DSP Transport Prototype
+# ZenoFrame
 
-This repository is a C++23 research prototype for a 1080p, 144 Hz image/DSP transport pipeline. It combines an AVX2/OpenMP CPU DSP engine with a UDP-style frame transport and three experimental bandwidth/recovery phases.
+ZenoFrame is a C++23 research prototype for a 1080p, 144 Hz image/DSP transport pipeline. It combines an AVX2/OpenMP CPU DSP engine with a UDP-style frame transport and three experimental bandwidth/recovery phases.
 
 The project is trying to answer one practical question:
 
