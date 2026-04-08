@@ -8,7 +8,8 @@ The current report is now split across:
 | --- | --- |
 | `BENCHMARKS.md` | Current measured numbers and benchmark interpretation. |
 | `README.md` | Project overview and common commands. |
-| `ARCHITECTURE.md` | Detailed system design and phase-by-phase architecture. |
+| `HOW_IT_WORKS.md` | Short conceptual walkthrough of the project. |
+| `MATH.md` | The formulas behind the implemented phases. |
 | `TESTING.md` | Validation commands, CTest map, and troubleshooting. |
 | `ROADMAP.md` | Remaining work and non-goals. |
 
@@ -33,4 +34,3 @@ The current report is now split across:
 | Phase 3 1000-frame path | `1000 / 1000` frames validated, final input max_abs `0.000012338`. |
 
 For the full details and caveats, read `BENCHMARKS.md`.
-

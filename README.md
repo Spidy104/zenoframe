@@ -158,7 +158,8 @@ Use the paced section for normal frame-budget discussion. Use the burst stress s
 
 | File | Why it exists |
 | --- | --- |
-| `ARCHITECTURE.md` | A deeper walkthrough of the data flow and phase design. |
+| `HOW_IT_WORKS.md` | A shorter conceptual walkthrough for humans. |
+| `MATH.md` | The formulas behind DIR, analytic concealment, and compressive sampling. |
 | `BENCHMARKS.md` | Current benchmark numbers and how to interpret them. |
 | `TESTING.md` | Test commands, test map, and troubleshooting notes. |
 | `ROADMAP.md` | What is done, what is next, and what should not be claimed yet. |
